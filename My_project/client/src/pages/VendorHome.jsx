@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import img2 from '../assets/img2.jpeg';
 import img3 from '../assets/img3.jpeg';
@@ -75,7 +75,7 @@ export default function VendorHome() {
 
   const fetchDashboard = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/vendor/dashboard', {
+      const { data } = await api.get('/api/vendor/dashboard', {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setDashboardData(data);
@@ -94,7 +94,7 @@ export default function VendorHome() {
     e.preventDefault();
     setRegError('');
     try {
-      await axios.post('http://localhost:5000/api/vendor/boutique', formData, {
+      await api.post('/api/vendor/boutique', formData, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       fetchDashboard();
