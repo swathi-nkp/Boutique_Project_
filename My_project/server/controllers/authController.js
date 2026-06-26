@@ -1,6 +1,9 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -40,6 +43,7 @@ export const register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        picture: user.picture,
         token: generateToken(user._id),
       });
     } else {
@@ -73,6 +77,7 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        picture: user.picture,
         token: generateToken(user._id),
       });
     } else {
@@ -105,4 +110,64 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   });
+};
+
+// @desc    Authenticate with Google
+// @route   POST /api/auth/google
+// @access  Public
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential, role } = req.body;
+
+    // Verify the Google token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, sub: googleId, picture } = payload;
+
+    // Check if user exists
+    let user = await User.findOne({ email });
+
+    // Normalize role to correct case
+    const normalizedRole = role && role.toLowerCase() === 'vendor' ? 'Vendor' : 'Customer';
+
+    if (user) {
+      // Prevent cross-portal login
+      if (role && user.role.toLowerCase() !== role.toLowerCase()) {
+        return res.status(401).json({ 
+          message: `This account is registered as a ${user.role}. Please select the '${user.role}' tab to login.` 
+        });
+      }
+
+      // Update googleId and picture if missing
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.picture = picture;
+        await user.save();
+      }
+    } else {
+      // Create new user for Google login
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        picture,
+        role: normalizedRole,
+      });
+    }
+
+    res.json({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      picture: user.picture,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };

@@ -52,13 +52,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (credential, role) => {
+    try {
+      const { data } = await api.post('/api/auth/google', {
+        credential,
+        role,
+      });
+      localStorage.setItem('userInfo', JSON.stringify(data));
+      setUser(data);
+      return { success: true, role: data.role };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Google Login failed',
+      };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('userInfo');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, googleLogin, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
