@@ -3,8 +3,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -120,6 +118,7 @@ export const googleLogin = async (req, res) => {
     const { credential, role } = req.body;
 
     // Verify the Google token
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     const ticket = await client.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
