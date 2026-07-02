@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 import heroBanner from '../assets/hero_final.png';
 import saree from '../assets/saree.jpg';
 import lehenga from '../assets/lehenga.jpg';
@@ -22,6 +23,7 @@ import coat from '../assets/coat.jpg';
 export default function CustomerHome() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const { cartItems } = useCart();
 
   const categories = [
     { name: 'Sarees', image: saree },
@@ -63,9 +65,16 @@ export default function CustomerHome() {
           <button className="hover:text-[#5C457D] transition-colors relative">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
           </button>
-          <button className="hover:text-[#5C457D] transition-colors relative">
+          <button 
+            className="hover:text-[#5C457D] transition-colors relative"
+            onClick={() => navigate('/cart')}
+          >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
-            <span className="absolute -top-1 -right-1 bg-[#5C457D] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">1</span>
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#5C457D] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                {cartItems.length}
+              </span>
+            )}
           </button>
           <button className="hover:text-[#5C457D] transition-colors" onClick={() => navigate('/account')}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
@@ -128,7 +137,11 @@ export default function CustomerHome() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {categories.map((cat, idx) => (
-            <div key={idx} className="group cursor-pointer text-center">
+            <div 
+              key={idx} 
+              className="group cursor-pointer text-center"
+              onClick={() => navigate(`/category/${cat.name.toLowerCase()}`)}
+            >
               <div className="relative aspect-square rounded-full overflow-hidden mb-4 shadow-md group-hover:shadow-xl group-hover:-translate-y-2 transition-all duration-300">
                 <img src={cat.image} alt={cat.name} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-500" />
               </div>
