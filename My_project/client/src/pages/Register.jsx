@@ -16,6 +16,7 @@ export default function Register() {
   const [passwordError, setPasswordError] = useState('');
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Clear any existing session when visiting the login page
   // so users always see the login/register form
@@ -39,31 +40,58 @@ export default function Register() {
     e.preventDefault();
     setAuthError('');
     if (password.length >= 8) {
-      if (mode === 'Login') {
-        const res = await login(email, password, role);
+      setIsLoading(true);
+      const startTime = Date.now();
+      try {
+        let res;
+        if (mode === 'Login') {
+          res = await login(email, password, role);
+        } else {
+          res = await register(name, email, password, role);
+        }
+
+        // Add a smooth minimum display time (1.2s) for premium transition flow
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, 1200 - elapsedTime);
+        if (remainingTime > 0) {
+          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+        }
+
         if (res.success) {
           navigate(res.role === 'Vendor' ? '/vendor' : '/home');
         } else {
           setAuthError(res.message);
+          setIsLoading(false);
         }
-      } else {
-        const res = await register(name, email, password, role);
-        if (res.success) {
-          navigate(res.role === 'Vendor' ? '/vendor' : '/home');
-        } else {
-          setAuthError(res.message);
-        }
+      } catch (err) {
+        setAuthError('An unexpected error occurred. Please try again.');
+        setIsLoading(false);
       }
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setAuthError('');
-    const res = await googleLogin(credentialResponse.credential, role);
-    if (res.success) {
-      navigate(res.role === 'Vendor' ? '/vendor' : '/home');
-    } else {
-      setAuthError(res.message);
+    setIsLoading(true);
+    const startTime = Date.now();
+    try {
+      const res = await googleLogin(credentialResponse.credential, role);
+      
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, 1200 - elapsedTime);
+      if (remainingTime > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      }
+
+      if (res.success) {
+        navigate(res.role === 'Vendor' ? '/vendor' : '/home');
+      } else {
+        setAuthError(res.message);
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setAuthError('Google Sign-In failed. Please try again.');
+      setIsLoading(false);
     }
   };
 
@@ -72,7 +100,31 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] font-sans text-[#333333]">
+    <div className="min-h-screen flex flex-col bg-[#FDFBF7] font-sans text-[#333333] relative">
+      {/* Loader Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-[#2D1B4E]/85 backdrop-blur-md z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
+          <div className="flex flex-col items-center space-y-6 max-w-sm px-6 text-center">
+            {/* Elegant Luxury Spinner */}
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-[3px] border-[#C8A96A]/20"></div>
+              <div className="absolute inset-0 rounded-full border-[3px] border-t-[#C8A96A] animate-spin"></div>
+              <div className="text-[#C8A96A] text-2xl font-serif font-semibold tracking-widest animate-pulse">M</div>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-3xl font-serif font-bold tracking-widest text-[#C8A96A] uppercase">Maison</h3>
+              <div className="w-12 h-[2px] bg-[#C8A96A] mx-auto my-3"></div>
+              <p className="text-xs font-bold tracking-widest text-white/70 uppercase animate-pulse">
+                Entering Boutique...
+              </p>
+              <p className="text-[11px] text-white/40 italic">
+                Curating your luxury experience
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="bg-white px-8 py-4 flex items-center justify-between border-b border-gray-100">
         <div className="text-2xl font-bold tracking-tight text-[#5C457D] uppercase">Maison</div>
@@ -209,7 +261,7 @@ export default function Register() {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="John Doe"
+                        placeholder="Enter your Name"
                         required
                         className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white focus:ring-4 focus:ring-[#5C457D]/5 focus:border-[#5C457D] outline-none transition-all text-sm"
                       />
@@ -227,7 +279,7 @@ export default function Register() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      placeholder="Enter your Email Address"
                       required
                       className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white focus:ring-4 focus:ring-[#5C457D]/5 focus:border-[#5C457D] outline-none transition-all text-sm"
                     />
