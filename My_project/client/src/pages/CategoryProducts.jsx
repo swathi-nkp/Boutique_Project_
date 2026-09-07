@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 
 // Use available images
 import img1 from '../assets/img1.jpeg';
@@ -14,7 +14,7 @@ export default function CategoryProducts() {
   const { categoryName } = useParams();
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const { addToCart, cartItems } = useCart();
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
   // Capitalize category name for display
   const title = categoryName ? categoryName.charAt(0).toUpperCase() + categoryName.slice(1) : 'Collection';
@@ -60,12 +60,14 @@ export default function CategoryProducts() {
         <div className="flex items-center space-x-8 text-[#2D233D]/80">
           <button 
             className="hover:text-[#5C457D] transition-colors relative"
-            onClick={() => navigate('/cart')}
+            onClick={() => navigate('/favorites')}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
-            {cartItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#5C457D] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                {cartItems.length}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill={favorites.length > 0 ? "#5C457D" : "none"} stroke={favorites.length > 0 ? "#5C457D" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+            </svg>
+            {favorites.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#5C457D] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {favorites.length}
               </span>
             )}
           </button>
@@ -110,8 +112,16 @@ export default function CategoryProducts() {
                 </div>
                 <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-auto">
                   <span className="text-[#5C457D] font-bold text-xl">{prod.price}</span>
-                  <button className="text-gray-400 hover:text-[#5C457D] transition-colors">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                  <button 
+                    className="hover:text-[#5C457D] transition-colors text-gray-400"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(prod);
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill={isFavorite(prod.name) ? "#5C457D" : "none"} stroke={isFavorite(prod.name) ? "#5C457D" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -155,11 +165,11 @@ export default function CategoryProducts() {
                 <button 
                   className="w-full bg-[#5C457D] text-white py-4 rounded-xl font-bold tracking-widest uppercase hover:bg-[#4A3668] transition-colors shadow-lg shadow-[#5C457D]/30"
                   onClick={() => {
-                    addToCart(selectedProduct);
-                    alert(`${selectedProduct.name} added to cart!`);
+                    setSelectedProduct(null);
+                    navigate('/placeorder', { state: { product: selectedProduct } });
                   }}
                 >
-                  Customize & Add to Cart
+                  Customize & Order Now
                 </button>
                 <button className="w-full bg-white border-2 border-gray-100 text-gray-700 py-4 rounded-xl font-bold tracking-widest uppercase hover:border-[#5C457D] hover:text-[#5C457D] transition-colors">
                   Contact Boutique

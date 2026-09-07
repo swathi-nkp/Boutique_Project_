@@ -17,6 +17,34 @@ const orderSchema = new mongoose.Schema(
       required: true,
       ref: 'Boutique',
     },
+    productName: {
+      type: String,
+      required: true,
+    },
+    productImage: {
+      type: String,
+    },
+    customerName: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
+    shippingAddress: {
+      type: String,
+      required: true,
+    },
+    measurements: {
+      chest: { type: String, default: '' },
+      waist: { type: String, default: '' },
+      hips: { type: String, default: '' },
+      height: { type: String, default: '' },
+      sleeveLength: { type: String, default: '' },
+      shoulderWidth: { type: String, default: '' },
+      notes: { type: String, default: '' },
+    },
     totalAmount: {
       type: Number,
       required: true,

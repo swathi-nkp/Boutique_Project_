@@ -8,7 +8,7 @@ import { OAuth2Client } from 'google-auth-library';
 // @access  Public
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone, gender, address, measurements } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Please provide all required fields' });
@@ -33,6 +33,10 @@ export const register = async (req, res) => {
       email,
       password: hashedPassword,
       role: normalizedRole,
+      phone: phone || '',
+      gender: gender || 'Female',
+      address: address || '',
+      measurements: measurements || { chest: '', waist: '', hips: '', height: '' },
     });
 
     if (user) {
@@ -42,6 +46,10 @@ export const register = async (req, res) => {
         email: user.email,
         role: user.role,
         picture: user.picture,
+        phone: user.phone,
+        gender: user.gender,
+        address: user.address,
+        measurements: user.measurements,
         token: generateToken(user._id),
       });
     } else {
@@ -76,6 +84,10 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         picture: user.picture,
+        phone: user.phone,
+        gender: user.gender,
+        address: user.address,
+        measurements: user.measurements,
         token: generateToken(user._id),
       });
     } else {
@@ -96,6 +108,10 @@ export const getMe = async (req, res) => {
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,
+      phone: req.user.phone,
+      gender: req.user.gender,
+      address: req.user.address,
+      measurements: req.user.measurements,
     };
     res.status(200).json(user);
   } catch (error) {
@@ -164,8 +180,54 @@ export const googleLogin = async (req, res) => {
       email: user.email,
       role: user.role,
       picture: user.picture,
+      phone: user.phone,
+      gender: user.gender,
+      address: user.address,
+      measurements: user.measurements,
       token: generateToken(user._id),
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+export const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
+      user.gender = req.body.gender !== undefined ? req.body.gender : user.gender;
+      user.address = req.body.address !== undefined ? req.body.address : user.address;
+      user.measurements = req.body.measurements !== undefined ? req.body.measurements : user.measurements;
+
+      if (req.body.password) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+      }
+
+      const updatedUser = await user.save();
+
+      res.json({
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        picture: updatedUser.picture,
+        phone: updatedUser.phone,
+        gender: updatedUser.gender,
+        address: updatedUser.address,
+        measurements: updatedUser.measurements,
+        token: generateToken(updatedUser._id),
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

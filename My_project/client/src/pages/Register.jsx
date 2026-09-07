@@ -17,6 +17,14 @@ export default function Register() {
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showTailoring, setShowTailoring] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('Female');
+  const [address, setAddress] = useState('');
+  const [chest, setChest] = useState('');
+  const [waist, setWaist] = useState('');
+  const [hips, setHips] = useState('');
+  const [height, setHeight] = useState('');
 
   // Clear any existing session when visiting the login page
   // so users always see the login/register form
@@ -41,20 +49,18 @@ export default function Register() {
     setAuthError('');
     if (password.length >= 8) {
       setIsLoading(true);
-      const startTime = Date.now();
       try {
         let res;
         if (mode === 'Login') {
           res = await login(email, password, role);
         } else {
-          res = await register(name, email, password, role);
-        }
-
-        // Add a smooth minimum display time (1.2s) for premium transition flow
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = Math.max(0, 1200 - elapsedTime);
-        if (remainingTime > 0) {
-          await new Promise((resolve) => setTimeout(resolve, remainingTime));
+          const extraDetails = role === 'Customer' ? {
+            phone,
+            gender,
+            address,
+            measurements: { chest, waist, hips, height }
+          } : {};
+          res = await register(name, email, password, role, extraDetails);
         }
 
         if (res.success) {
@@ -73,15 +79,8 @@ export default function Register() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setAuthError('');
     setIsLoading(true);
-    const startTime = Date.now();
     try {
       const res = await googleLogin(credentialResponse.credential, role);
-      
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, 1200 - elapsedTime);
-      if (remainingTime > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      }
 
       if (res.success) {
         navigate(res.role === 'Vendor' ? '/vendor' : '/home');
@@ -251,21 +250,25 @@ export default function Register() {
                 )}
                 
                 {mode === 'Register' && (
-                  <div>
-                    <label className="block text-[13px] font-bold text-gray-800 mb-2 uppercase tracking-tight">Full Name</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      </span>
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter your Name"
-                        required
-                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white focus:ring-4 focus:ring-[#5C457D]/5 focus:border-[#5C457D] outline-none transition-all text-sm"
-                      />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[13px] font-bold text-gray-800 mb-2 uppercase tracking-tight">Full Name</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Enter your Name"
+                          required
+                          className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white focus:ring-4 focus:ring-[#5C457D]/5 focus:border-[#5C457D] outline-none transition-all text-sm"
+                        />
+                      </div>
                     </div>
+
+
                   </div>
                 )}
 

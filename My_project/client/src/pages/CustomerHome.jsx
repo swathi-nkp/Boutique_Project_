@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import heroBanner from '../assets/hero_final.png';
 import saree from '../assets/saree.jpg';
 import lehenga from '../assets/lehenga.jpg';
@@ -23,7 +23,10 @@ import coat from '../assets/coat.jpg';
 export default function CustomerHome() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const { cartItems } = useCart();
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+
+  const boutiquesRef = useRef(null);
+  const collectionsRef = useRef(null);
 
   const categories = [
     { name: 'Sarees', image: saree },
@@ -54,10 +57,9 @@ export default function CustomerHome() {
         <div className="flex items-center space-x-12">
           <div className="text-2xl font-serif font-bold text-[#5C457D] tracking-tight uppercase">Maison</div>
           <div className="hidden lg:flex space-x-8 text-sm font-bold tracking-widest text-[#2D233D]/70 uppercase">
-            <span className="hover:text-[#5C457D] cursor-pointer transition-colors">Home</span>
-            <span className="hover:text-[#5C457D] cursor-pointer transition-colors">Boutiques</span>
-            <span className="hover:text-[#5C457D] cursor-pointer transition-colors">Collection</span>
-            <span className="hover:text-[#5C457D] cursor-pointer transition-colors">Customize</span>
+            <span onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-[#5C457D] cursor-pointer transition-colors">Home</span>
+            <span onClick={() => boutiquesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#5C457D] cursor-pointer transition-colors">Boutiques</span>
+            <span onClick={() => collectionsRef.current?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-[#5C457D] cursor-pointer transition-colors">Collection</span>
           </div>
         </div>
 
@@ -67,12 +69,14 @@ export default function CustomerHome() {
           </button>
           <button 
             className="hover:text-[#5C457D] transition-colors relative"
-            onClick={() => navigate('/cart')}
+            onClick={() => navigate('/favorites')}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
-            {cartItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#5C457D] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                {cartItems.length}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill={favorites.length > 0 ? "#5C457D" : "none"} stroke={favorites.length > 0 ? "#5C457D" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+            </svg>
+            {favorites.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#5C457D] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {favorites.length}
               </span>
             )}
           </button>
@@ -98,7 +102,10 @@ export default function CustomerHome() {
           <p className="text-xl text-[#2D233D]/80 mb-10 leading-relaxed max-w-lg font-medium">
             Your vision, our craft. Customize outfits that reflect your unique style with the perfect fit and finest details.
           </p>
-          <button className="bg-[#5C457D] text-white px-8 py-4 rounded-md font-bold tracking-widest text-sm uppercase hover:bg-[#4A3668] transition-all flex items-center gap-3">
+          <button 
+            onClick={() => boutiquesRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="bg-[#5C457D] text-white px-8 py-4 rounded-md font-bold tracking-widest text-sm uppercase hover:bg-[#4A3668] transition-all flex items-center gap-3"
+          >
             Explore Boutiques <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
 
@@ -152,7 +159,7 @@ export default function CustomerHome() {
       </section>
 
       {/* Boutiques */}
-      <section className="bg-white px-12 py-20">
+      <section ref={boutiquesRef} className="bg-white px-12 py-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Curated Boutiques</h2>
           <p className="text-gray-500 max-w-xl mx-auto">Explore unique collections from master designers across the globe.</p>
@@ -181,7 +188,7 @@ export default function CustomerHome() {
       </section>
 
       {/* New Arrivals */}
-      <section className="px-12 py-24">
+      <section ref={collectionsRef} className="px-12 py-24">
         <div className="flex items-center justify-between mb-16">
           <div>
             <h2 className="text-3xl font-bold mb-2">New Arrivals</h2>
@@ -193,11 +200,23 @@ export default function CustomerHome() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {products.map((prod, idx) => (
-            <div key={idx} className="group cursor-pointer">
+            <div 
+              key={idx} 
+              className="group cursor-pointer"
+              onClick={() => navigate('/placeorder', { state: { product: prod } })}
+            >
               <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-6 shadow-sm">
                 <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
-                <div className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md hover:text-[#5C457D] transition-colors">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></svg>
+                <div 
+                  className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md hover:text-[#5C457D] transition-colors z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(prod);
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill={isFavorite(prod.name) ? "#5C457D" : "none"} stroke={isFavorite(prod.name) ? "#5C457D" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                  </svg>
                 </div>
                 <div className="absolute bottom-4 left-4 bg-[#006400] text-white text-[9px] font-bold px-2.5 py-1 rounded-md uppercase tracking-widest">{prod.tag}</div>
               </div>

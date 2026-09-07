@@ -32,6 +32,24 @@ const userSchema = new mongoose.Schema(
       enum: ['Customer', 'Vendor'],
       default: 'Customer',
     },
+    phone: {
+      type: String,
+      default: '',
+    },
+    gender: {
+      type: String,
+      default: 'Female',
+    },
+    address: {
+      type: String,
+      default: '',
+    },
+    measurements: {
+      chest: { type: String, default: '' },
+      waist: { type: String, default: '' },
+      hips: { type: String, default: '' },
+      height: { type: String, default: '' },
+    },
   },
   { timestamps: true }
 );

@@ -15,3 +15,16 @@ body {
   margin: 0;
   font-family: var(--font-sans);
 }
+
+/* Global overrides to make all light text utility classes dark and highly legible */
+.text-gray-300 {
+  color: #6b7280 !important; /* medium-dark gray */
+}
+
+.text-gray-400 {
+  color: #4b5563 !important; /* dark gray */
+}
+
+.text-gray-500 {
+  color: #1f2937 !important; /* very dark gray */
+}

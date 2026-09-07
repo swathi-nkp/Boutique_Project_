@@ -66,6 +66,7 @@ export default function VendorHome() {
   const [editSuccess, setEditSuccess] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
 
@@ -128,9 +129,21 @@ export default function VendorHome() {
     setTimeout(() => setEditSuccess(''), 3000);
   };
 
-  const totalRevenue = 24550;
-  const pendingCount = DUMMY_ORDERS.filter(o => o.status === 'Pending').length;
-  const finishedCount = DUMMY_ORDERS.filter(o => o.status === 'Finished').length;
+  const ordersList = dashboardData?.orders || [];
+  const totalRevenue = dashboardData?.boutique?.revenue || 0;
+  const pendingCount = ordersList.filter(o => o.status === 'Pending').length;
+  const finishedCount = ordersList.filter(o => o.status === 'Finished').length;
+
+  const handleFinishOrder = async (orderId) => {
+    try {
+      await api.put(`/api/orders/${orderId}/status`, { status: 'Finished' }, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      fetchDashboard();
+    } catch (err) {
+      console.error('Error updating order status:', err);
+    }
+  };
 
   if (loading) {
     return (
@@ -286,21 +299,27 @@ export default function VendorHome() {
                   <button onClick={() => setActiveTab('orders')} className="text-sm text-[#4A3668] font-semibold hover:underline">View All →</button>
                 </div>
                 <div className="space-y-3">
-                  {DUMMY_ORDERS.slice(0, 3).map(order => (
-                    <div key={order._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-[#FDF2F4] transition-colors cursor-pointer" onClick={() => { setActiveTab('chat'); setActiveChatOrder(order._id); }}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold text-sm">{order.avatar}</div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{order.customer}</div>
-                          <div className="text-xs text-gray-400">{order.date} · #{order._id.slice(0, 8)}</div>
+                  {ordersList.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic text-center py-4">No recent orders yet.</p>
+                  ) : (
+                    ordersList.slice(0, 3).map(order => (
+                      <div key={order._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-[#FDF2F4] transition-colors cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold text-sm">
+                            {order.customerName?.[0]?.toUpperCase() || 'C'}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">{order.customerName}</div>
+                            <div className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()} · #{order._id.slice(-8)}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-sm font-bold">₹{order.totalAmount.toLocaleString()}</div>
+                          <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${order.status === 'Finished' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{order.status}</span>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-sm font-bold">₹{order.amount.toLocaleString()}</div>
-                        <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${order.status === 'Finished' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{order.status}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -338,26 +357,38 @@ export default function VendorHome() {
                     </tr>
                   </thead>
                   <tbody>
-                    {DUMMY_ORDERS.map(order => (
-                      <tr key={order._id} className="border-b border-gray-50 last:border-0 hover:bg-[#FDFCFE] transition-colors">
-                        <td className="py-4 pr-6 text-sm font-mono text-gray-500">#{order._id.slice(0, 8)}</td>
-                        <td className="py-4 pr-6">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold text-xs">{order.avatar}</div>
-                            <span className="text-sm font-semibold">{order.customer}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 pr-6 text-sm text-gray-400">{order.date}</td>
-                        <td className="py-4 pr-6 text-sm font-bold">₹{order.amount.toLocaleString()}</td>
-                        <td className="py-4 pr-6">
-                          <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${order.status === 'Finished' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{order.status}</span>
-                        </td>
-                        <td className="py-4">
-                          <button onClick={() => { setActiveTab('chat'); setActiveChatOrder(order._id); }}
-                            className="text-[#4A3668] text-sm font-semibold hover:underline">Message</button>
-                        </td>
+                    {ordersList.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="text-center py-6 text-sm text-gray-400 italic">No orders found.</td>
                       </tr>
-                    ))}
+                    ) : (
+                      ordersList.map(order => (
+                        <tr key={order._id} className="border-b border-gray-50 last:border-0 hover:bg-[#FDFCFE] transition-colors">
+                          <td className="py-4 pr-6 text-sm font-mono text-gray-500">#{order._id.slice(-8)}</td>
+                          <td className="py-4 pr-6">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-8 h-8 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                {order.customerName?.[0]?.toUpperCase() || 'C'}
+                              </div>
+                              <span className="text-sm font-semibold">{order.customerName}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 pr-6 text-sm text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</td>
+                          <td className="py-4 pr-6 text-sm font-bold">₹{order.totalAmount.toLocaleString()}</td>
+                          <td className="py-4 pr-6">
+                            <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${order.status === 'Finished' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{order.status}</span>
+                          </td>
+                          <td className="py-4 flex gap-3">
+                            <button onClick={() => setSelectedOrder(order)}
+                              className="text-[#4A3668] text-sm font-semibold hover:underline">View Specs</button>
+                            {order.status === 'Pending' && (
+                              <button onClick={() => handleFinishOrder(order._id)}
+                                className="text-green-600 text-sm font-semibold hover:underline">Finish</button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -436,16 +467,16 @@ export default function VendorHome() {
               <div className="w-72 bg-white rounded-2xl shadow-sm flex flex-col overflow-hidden">
                 <div className="p-5 border-b border-gray-100">
                   <h3 className="font-bold text-gray-900">Conversations</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">{DUMMY_ORDERS.length} customers</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{ordersList.length} customers</p>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                  {DUMMY_ORDERS.map(order => (
+                  {ordersList.map(order => (
                     <button key={order._id} onClick={() => setActiveChatOrder(order._id)}
                       className={`w-full flex items-center space-x-3 px-5 py-4 border-b border-gray-50 hover:bg-[#FDFCFE] transition-colors text-left ${activeChatOrder === order._id ? 'bg-[#FDF2F4] border-l-2 border-l-[#4A3668]' : ''}`}>
-                      <div className="w-10 h-10 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">{order.avatar}</div>
+                      <div className="w-10 h-10 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">{order.customerName?.[0] || 'C'}</div>
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-gray-900 truncate">{order.customer}</div>
-                        <div className="text-xs text-gray-400 truncate">{(chatHistory[order._id] || [])[0]?.text || 'No messages yet'}</div>
+                        <div className="text-sm font-semibold text-gray-900 truncate">{order.customerName}</div>
+                        <div className="text-xs text-gray-400 truncate">{(chatHistory[order._id] || [])[0]?.text || `Design: ${order.productName}`}</div>
                       </div>
                       <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${order.status === 'Finished' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>{order.status === 'Pending' ? '●' : '✓'}</span>
                     </button>
@@ -466,12 +497,12 @@ export default function VendorHome() {
                   <>
                     {/* Chat Header */}
                     <div className="p-5 border-b border-gray-100 flex items-center space-x-3">
-                      {(() => { const o = DUMMY_ORDERS.find(x => x._id === activeChatOrder); return o ? (
+                      {(() => { const o = ordersList.find(x => x._id === activeChatOrder); return o ? (
                         <>
-                          <div className="w-10 h-10 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold">{o.avatar}</div>
+                          <div className="w-10 h-10 bg-[#4A3668] rounded-full flex items-center justify-center text-white font-bold">{o.customerName?.[0]}</div>
                           <div>
-                            <div className="font-bold text-gray-900">{o.customer}</div>
-                            <div className="text-xs text-gray-400">Order #{o._id.slice(0, 8)} · {o.date}</div>
+                            <div className="font-bold text-gray-900">{o.customerName}</div>
+                            <div className="text-xs text-gray-400">Order #{o._id.slice(-8)} · {new Date(o.createdAt).toLocaleDateString()}</div>
                           </div>
                           <span className={`ml-auto px-3 py-1 text-xs font-bold rounded-full ${o.status === 'Finished' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{o.status}</span>
                         </>
@@ -558,7 +589,106 @@ export default function VendorHome() {
           </div>
         </div>
       )}
+      
+      {/* ── Order Specs Modal ── */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
+          <div className="bg-white rounded-3xl w-full max-w-lg p-8 z-10 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Custom Tailoring Specs</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Order #{selectedOrder._id.slice(-8)}</p>
+              </div>
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <Icon.close />
+              </button>
+            </div>
+
+            <div className="space-y-5 overflow-y-auto pr-1">
+              {/* Product Info */}
+              <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                <div className="w-12 h-16 bg-gray-100 rounded-xl overflow-hidden shrink-0">
+                  <img src={selectedOrder.productImage || img2} alt={selectedOrder.productName} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-gray-800">{selectedOrder.productName}</h4>
+                  <p className="text-[#4A3668] font-bold text-xs">₹{(selectedOrder.totalAmount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Shipping & contact details */}
+              <div className="space-y-2">
+                <h5 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-50 pb-1">Customer & Delivery Info</h5>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700">
+                  <div>
+                    <span className="font-semibold block text-[9px] text-gray-500 uppercase">Customer Name</span>
+                    <span>{selectedOrder.customerName}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold block text-[9px] text-gray-500 uppercase">Phone</span>
+                    <span>{selectedOrder.phone}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="font-semibold block text-[9px] text-gray-500 uppercase">Shipping Address</span>
+                    <span>{selectedOrder.shippingAddress}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Measurements */}
+              <div className="space-y-2 pt-1">
+                <h5 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-50 pb-1">Measurements (Inches)</h5>
+                <div className="grid grid-cols-3 gap-3 text-xs text-gray-700">
+                  {[
+                    { label: 'Chest', val: selectedOrder.measurements?.chest },
+                    { label: 'Waist', val: selectedOrder.measurements?.waist },
+                    { label: 'Hips', val: selectedOrder.measurements?.hips },
+                    { label: 'Height', val: selectedOrder.measurements?.height },
+                    { label: 'Sleeve', val: selectedOrder.measurements?.sleeveLength },
+                    { label: 'Shoulder', val: selectedOrder.measurements?.shoulderWidth },
+                  ].map((m) => (
+                    <div key={m.label} className="bg-[#FDFBF7] border border-gray-100 p-2.5 rounded-xl text-center">
+                      <span className="font-bold block text-[9px] text-gray-500 uppercase mb-0.5">{m.label}</span>
+                      <span className="font-bold text-[#4A3668] text-sm">{m.val || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedOrder.measurements?.notes && (
+                <div className="space-y-1">
+                  <span className="font-semibold block text-[9px] text-gray-500 uppercase">Special Tailor Notes</span>
+                  <p className="text-xs text-gray-600 bg-amber-50/50 border border-amber-100/50 p-3 rounded-xl italic">
+                    "{selectedOrder.measurements.notes}"
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-4 pt-4 border-t border-gray-100 mt-auto">
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="flex-1 border border-gray-200 text-gray-500 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+              {selectedOrder.status === 'Pending' && (
+                <button
+                  onClick={() => {
+                    handleFinishOrder(selectedOrder._id);
+                    setSelectedOrder(null);
+                  }}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-colors shadow-md shadow-green-600/10"
+                >
+                  Complete Order
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

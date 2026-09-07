@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 
 /* ─────────────────────── SVG Icons ─────────────────────── */
 const UserIcon    = ({s=20,c='currentColor'}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
@@ -39,7 +41,7 @@ function NavItem({ icon, label, active, onClick }) {
 function Field({ label, children }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+      <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest pl-1">
         {label}
       </label>
       {children}
@@ -49,7 +51,7 @@ function Field({ label, children }) {
 
 const inp =
   'w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-700 ' +
-  'outline-none focus:bg-white focus:border-[#5C457D]/30 focus:ring-4 focus:ring-[#5C457D]/8 transition-all';
+  'placeholder:text-gray-500 outline-none focus:bg-white focus:border-[#5C457D]/30 focus:ring-4 focus:ring-[#5C457D]/8 transition-all';
 
 /* ─────────────────── Order Card ─────────────────────────── */
 function OrderCard({ image, boutique, status, statusIcon, statusColor, price, action }) {
@@ -87,19 +89,105 @@ function OrderCard({ image, boutique, status, statusIcon, statusColor, price, ac
 /* ══════════════════ Main Component ══════════════════════════ */
 export default function AccountDetails() {
   const navigate = useNavigate();
+  const { user, updateProfile, logout } = useAuth();
   const [tab, setTab] = useState('profile');
   const [form, setForm] = useState({
-    fullName : 'Sophia Bennett',
-    email    : 'sophia.b@example.com',
-    phone    : '+1 (555) 123-4567',
+    fullName : '',
+    email    : '',
+    phone    : '',
     gender   : 'Female',
-    address  : '124 Luxury Lane, Apartment 4B, New York, NY',
+    address  : '',
   });
 
-  const orders = [
-    { id:1, image:'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&q=80&w=600', boutique:'The Silk Road', status:'In Transit', statusColor:'#16a34a', statusIcon:<ArrowIcon/>, price:'$420',   action:'Track Order'  },
-    { id:2, image:'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=600', boutique:'Maison Noir',   status:'Delivered',  statusColor:'#15803d', statusIcon:<CheckIcon/>,  price:'$1,250', action:'View Receipt' },
-  ];
+  // Tailoring measurements states
+  const [chest, setChest] = useState('');
+  const [waist, setWaist] = useState('');
+  const [hips, setHips] = useState('');
+  const [height, setHeight] = useState('');
+
+  const [myOrders, setMyOrders] = useState([]);
+  const [saveSuccess, setSaveSuccess] = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  // Sync state with logged in user context
+  useEffect(() => {
+    if (user) {
+      setForm({
+        fullName : user.name || '',
+        email    : user.email || '',
+        phone    : user.phone || '',
+        gender   : user.gender || 'Female',
+        address  : user.address || '',
+      });
+      if (user.measurements) {
+        setChest(user.measurements.chest || '');
+        setWaist(user.measurements.waist || '');
+        setHips(user.measurements.hips || '');
+        setHeight(user.measurements.height || '');
+      }
+    }
+  }, [user]);
+
+  // Fetch actual user orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      let backendOrders = [];
+      try {
+        const { data } = await api.get('/api/orders/myorders');
+        backendOrders = data;
+      } catch (err) {
+        console.error('Error fetching customer orders:', err);
+      }
+
+      let localOrders = [];
+      try {
+        const stored = localStorage.getItem('localOrders');
+        if (stored) {
+          localOrders = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error('Error parsing local orders:', e);
+      }
+
+      // Merge backend and local orders, prioritizing local orders
+      const combined = [...localOrders];
+      backendOrders.forEach(bo => {
+        if (!combined.some(lo => lo._id === bo._id)) {
+          combined.push(bo);
+        }
+      });
+
+      setMyOrders(combined);
+    };
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
+
+  const handleSaveChanges = async () => {
+    setSaveSuccess('');
+    setSaveError('');
+    const res = await updateProfile({
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      gender: form.gender,
+      address: form.address,
+      measurements: {
+        chest,
+        waist,
+        hips,
+        height
+      }
+    });
+
+    if (res.success) {
+      setSaveSuccess('Profile and tailoring details updated successfully!');
+      setTimeout(() => setSaveSuccess(''), 4500);
+    } else {
+      setSaveError(res.message || 'Profile update failed.');
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#fafafa]">
@@ -114,8 +202,7 @@ export default function AccountDetails() {
         </span>
 
         <div className="flex items-center gap-5 text-gray-400">
-          <button className="hover:text-[#5C457D] transition-colors"><HeartIcon/></button>
-          <button className="hover:text-[#5C457D] transition-colors"><BagIcon/></button>
+          <button className="hover:text-[#5C457D] transition-colors" onClick={() => navigate('/favorites')}><HeartIcon/></button>
           <button className="hover:text-[#5C457D] transition-colors"><ChatIcon/></button>
           <button
             className="text-[#5C457D]"
@@ -150,7 +237,7 @@ export default function AccountDetails() {
 
           <div className="my-5 border-t border-white/15"/>
 
-          <NavItem icon={<LogoutIcon s={18}/>} label="Logout" active={false} onClick={() => navigate('/')}/>
+          <NavItem icon={<LogoutIcon s={18}/>} label="Logout" active={false} onClick={() => { logout(); navigate('/'); }}/>
 
           {/* Decorative bottom ornament */}
           <div className="mt-auto pt-10 flex justify-center">
@@ -228,10 +315,32 @@ export default function AccountDetails() {
               <input type="text" value={form.address} onChange={e=>setForm({...form,address:e.target.value})} className={inp}/>
             </Field>
 
-            <div className="mt-8">
+            <div className="border-t border-gray-100 pt-6 mt-6">
+              <h5 className="text-xs font-bold text-gray-600 uppercase tracking-widest mb-4">Tailoring Measurements (Inches)</h5>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Field label="Chest Size">
+                  <input type="text" value={chest} onChange={e=>setChest(e.target.value)} className={inp + ' text-center font-semibold'}/>
+                </Field>
+                <Field label="Waist Size">
+                  <input type="text" value={waist} onChange={e=>setWaist(e.target.value)} className={inp + ' text-center font-semibold'}/>
+                </Field>
+                <Field label="Hips Size">
+                  <input type="text" value={hips} onChange={e=>setHips(e.target.value)} className={inp + ' text-center font-semibold'}/>
+                </Field>
+                <Field label="Height">
+                  <input type="text" value={height} onChange={e=>setHeight(e.target.value)} className={inp + ' text-center font-semibold'}/>
+                </Field>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3">
+              {saveSuccess && <div className="text-green-700 bg-green-50 border border-green-200 p-4 rounded-xl text-sm font-semibold">{saveSuccess}</div>}
+              {saveError && <div className="text-red-500 bg-red-50 border border-red-200 p-4 rounded-xl text-sm">{saveError}</div>}
+              
               <button
-                className="px-8 py-3.5 rounded-2xl font-bold text-sm text-white transition-all duration-200 active:scale-95 shadow-lg"
-                style={{ background: 'linear-gradient(135deg,#5C457D,#4A3668)', boxShadow:'0 8px 24px rgba(233,30,99,0.30)' }}
+                onClick={handleSaveChanges}
+                className="px-8 py-3.5 rounded-2xl font-bold text-sm text-white transition-all duration-200 active:scale-95 shadow-lg w-max"
+                style={{ background: 'linear-gradient(135deg,#5C457D,#4A3668)', boxShadow:'0 8px 24px rgba(92,69,125,0.25)' }}
               >
                 Save Changes
               </button>
@@ -247,7 +356,22 @@ export default function AccountDetails() {
             <p className="text-sm text-gray-400 mb-7">Track your recent purchases from our partner boutiques.</p>
 
             <div className="flex flex-col gap-4">
-              {orders.map(o => <OrderCard key={o.id} {...o}/>)}
+              {myOrders.length === 0 ? (
+                <p className="text-sm text-gray-400 italic text-center py-6 bg-gray-50 rounded-2xl border border-gray-100">No orders placed yet.</p>
+              ) : (
+                myOrders.map(o => (
+                  <OrderCard
+                    key={o._id}
+                    image={o.productImage || 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&q=80&w=600'}
+                    boutique={o.boutiqueId?.boutiqueName || 'Maison Boutique'}
+                    status={o.status}
+                    statusColor={o.status === 'Finished' ? '#15803d' : '#16a34a'}
+                    statusIcon={o.status === 'Finished' ? <CheckIcon/> : <ArrowIcon/>}
+                    price={`₹${o.totalAmount.toLocaleString()}`}
+                    action="Track Order"
+                  />
+                ))
+              )}
             </div>
           </div>
 
